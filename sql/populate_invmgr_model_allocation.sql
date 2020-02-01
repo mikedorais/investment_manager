@@ -10,7 +10,7 @@ SELECT ai.master_account_guid, ai.master_account_code, ai.master_account_name,
 	    SUM((IFNULL(cp.value, 0) / av.total_value) / ia.commit_proportion) AS target_proportion
 	FROM  invmgr_account_investment ai 
 		LEFT OUTER JOIN v_invmgr_commodity_portfolio cp ON ai.master_account_guid = cp.master_account_guid AND ai.namespace = cp.namespace AND ai.mnemonic = cp.mnemonic	
-		INNER JOIN v_invmgr_acount_value av ON av.master_account_guid = ai.master_account_guid
+		INNER JOIN v_invmgr_acount_value av ON av.guid = ai.master_account_guid
 		INNER JOIN invmgr_investment_account ia ON ia.guid = ai.master_account_guid
 	GROUP BY ai.master_account_guid, ai.master_account_code, ai.master_account_name, ai.asset_class
 	ORDER BY ai.master_account_name, ai.asset_class

@@ -24,5 +24,10 @@ Beyond that the program could implement more sophisticated and complex strategie
 
 
 ## Next Enhancements
-* Improve TODO items in scripts
+* Improve TODO items in SQL scripts
 * Consider removing redundant data from table fields and use views to pull the data instead.  Consider, though, the convenience for a table that needs to be edited.
+* Write Validations
+    * invmgr_account_investment should have every commodidty/inv account combination in v_invmgr_commodity_portfolio at least set to an asset_class "DIVEST" with target_proportion of 0 in invmgr_model_allocation (i.e. you want to sell it off and replace it with others).
+    * Every asset_class in invmgr_account_investment should have a record in invmgr_model_allocation with the same asset_class
+    * Every asset_class in invmgr_model_allocation should have at least one record in invmgr_account_investment with the same asset_class
+    * More validations?
