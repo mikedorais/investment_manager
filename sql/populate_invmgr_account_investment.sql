@@ -60,23 +60,23 @@ SELECT cp.master_account_guid, cp.master_account_code,
 -- First make sure each commodity is added as commodities in GnuCash, if it is not there already.
 -- Then insert the rows into the the invmgr_account_investment table.
 
--- This might be done like this.  This is the way I did it,
--- once for each asset class with the in clause of mnemonic
--- values filled in with the commodities needed to be added -
--- to the class.  But this requires that you specify constant
--- values in the select for master_account_guid, master_account_code,
--- the sort key prefix, account name, and the asset class.
+-- This query assumes that the asset class has already been added to invmgr_model_allocation for the investment account
+-- and that its redundant fields from accounts or invmgr_investment_account are updated with the latest corresponding values
+-- and that all the commodities have already been added to the commodities table.
+-- Then all that is needed is to specify the master account code and asset class in the inner join clause
+-- and add the list of mnemonics to add to the in expression in the where clause.
 
--- Reg IRA 
---'1 U.S. - Total Market'
+-- TODO: The sort key values generated require editing after the insert to remove everything except the first number
+-- if you want the sort key to be ACCTCODE-N-MNEMONIC where N is the first character, a number, of the asset class.
+
 INSERT INTO invmgr_account_investment
 (master_account_guid, master_account_code, sort_key, master_account_name, commodity_guid, namespace, mnemonic, commodity_name, asset_class)
-SELECT '1cffd4fb6000be456194c382e2cb28d9', 'TDIRAP', 'TDIRAP-1-' || c.mnemonic, 'TD Ameritrade Regular IRA', 
-		c.guid, c.namespace, c.mnemonic, c.fullname, '1 U.S. - Total Market'
+SELECT ma.master_account_guid, ma.master_account_code, ma.sort_key || '-' || c.mnemonic, ma.master_account_name, 
+		c.guid, c.namespace, c.mnemonic, c.fullname, ma.asset_class
 FROM commodities c
-WHERE mnemonic in 
-('XXXX',
-'YYYY', 
+	 inner join invmgr_model_allocation ma on ma.master_account_code = 'TDIRAR' and ma.asset_class = '8 International Fixed Income'
+WHERE c.mnemonic in 
+(
 ...
 )
 

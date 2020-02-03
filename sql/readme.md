@@ -30,4 +30,11 @@ Beyond that the program could implement more sophisticated and complex strategie
     * invmgr_account_investment should have every commodidty/inv account combination in v_invmgr_commodity_portfolio at least set to an asset_class "DIVEST" with target_proportion of 0 in invmgr_model_allocation (i.e. you want to sell it off and replace it with others).
     * Every asset_class in invmgr_account_investment should have a record in invmgr_model_allocation with the same asset_class
     * Every asset_class in invmgr_model_allocation should have at least one record in invmgr_account_investment with the same asset_class
+    * Every commodity in invmgr_account_investment should have a record in invmgr_commodity_research with the same namespace and mnemonic.  Check namespace, check for renamed symbols.
     * More validations?
+
+* Columns in invmgr_commodity_research originally came from a spreadsheet and the columns were a synthensis derived in part from the search in TD Ameritrade on the symbol, the prospectus, MoringStar (TM) analysis, segment/asset targt from https://www.etf.com.  You can use them however you like (I'm not providing data).  But here is how I used them:
+    * asset_class: Fixed Income, Equity, Balanced
+    * asset_type_target: Primarily based on https://www.etf.com "Segment"
+    * aseet_target: Morningstar(TM) Category
+    * asset_max_actual: Morningstar(TM) Style box

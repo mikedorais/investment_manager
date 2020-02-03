@@ -5,9 +5,11 @@
 
 SELECT ai.master_account_guid, ai.master_account_code, ai.master_account_name, ai.sort_key,
 		aa.invacct_commit_proportion, ai.asset_class, aa.asset_class_commit_proportion, aa.model_target_proportion AS asset_class_model_proportion,
-		aa.current_target_proportion AS asset_class_target_proportion,
+		aa.current_target_proportion AS asset_class_target_proportion,	
+		(IFNULL(cp.value, 0) / av.total_value) as actual_proportion,
+		(IFNULL(cp.value, 0) / av.total_value) as new_proportion, -- start off new with value of actual for easy use in spreadsheet.
 		ai.commodity_guid, ai.namespace, ai.mnemonic, ai.commodity_name,
-    	(IFNULL(cp.value, 0) / av.total_value) as actual_proportion
+		IFNULL(cp.value, 0) AS actual_value
 	FROM  invmgr_account_investment ai 
 		LEFT OUTER JOIN v_invmgr_commodity_portfolio cp ON ai.master_account_guid = cp.master_account_guid AND ai.commodity_guid = cp.commodity_guid
 		INNER JOIN v_invmgr_asset_allocation aa ON aa.master_account_guid = ai.master_account_guid AND aa.asset_class = ai.asset_class
