@@ -1,4 +1,6 @@
--- This populates invmgr_account_investment with starting rows based on all existing investments in 
+
+
+-- This populates the empty invmgr_account_investment with starting rows based on all existing investments in 
 -- all investment accounts  that will be the table to record each invesment option, and what asset_class will be used
 -- for allocation in each investment account.  Note that a commodity may appear more than once
 -- if it is to be an option for more than one investment account but should only appear once
@@ -52,6 +54,12 @@ SELECT cp.master_account_guid, cp.master_account_code,
 -- records and sort keys.  Have the complete set of asset
 -- classes with their final names at hand for the next step.
 
+
+-- *************************************************************
+-- Add additional account investment options not yet invested in
+-- Do this the first time you set it up and then again when you have
+-- new investements.
+
 -- At this point you should insert additional records into invmgr_account_investment
 -- for investment options you are not yet invested in but want to be considering
 -- as investments to reach a target percentage for the asset_class it is assigned to for
@@ -80,6 +88,58 @@ WHERE c.mnemonic in
 ...
 )
 
+SELECT * FROM invmgr_account_investment
 
--- TODO: Update values that are redundant 
--- from master tables sources
+-- VALDIATIONS -- Should return 0 rows
+SELECT * FROM invmgr_account_investment
+	WHERE master_account_guid NOT IN (SELECT guid FROM accounts)
+SELECT * FROM invmgr_account_investment
+	WHERE commodity_guid NOT IN (SELECT guid FROM commodities)
+
+-- UPDATE values that are redundant copies (for human reference)
+	
+UPDATE invmgr_account_investment
+	SET master_account_code = (SELECT code FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
+	WHERE master_account_code <> (SELECT code FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
+	
+UPDATE invmgr_account_investment
+	SET master_account_name = (SELECT name FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
+	WHERE master_account_name <> (SELECT name FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
+	
+UPDATE invmgr_account_investment
+	SET commodity_name = (SELECT fullname FROM commodities c WHERE c.guid = invmgr_account_investment.commodity_guid)
+	WHERE commodity_name <> (SELECT fullname FROM commodities c WHERE c.guid = invmgr_account_investment.commodity_guid)
+
+SELECT 	namespace, mnemonic, name, commodity_type, asset_class, asset_type_target, asset_target, asset_mix_actual, 
+	 esg, no_fee, no_load, net_exp_ratio, index_tracking, score_application, `index`, base_index FROM invmgr_commodity_research
+
+
+
+-- Make sure all commodity names in invmgr_commodity_research match the name of the commodity in commodities
+UPDATE invmgr_commodity_research
+	SET name = (SELECT fullname FROM commodities c 
+							WHERE c.namespace = invmgr_commodity_research.namespace AND c.mnemonic = invmgr_commodity_research.mnemonic)
+	AND name <> (SELECT fullname FROM commodities c 
+							WHERE c.namespace = invmgr_commodity_research.namespace AND c.mnemonic = invmgr_commodity_research.mnemonic)
+
+-- Insert any invested commodities missing into invmgr_commodity_research
+INSERT INTO invmgr_commodity_research
+	(namespace, mnemonic, name, commodity_type, asset_class, asset_type_target, asset_target, asset_mix_actual) 
+	SELECT DISTINCT cp.namespace, cp.mnemonic, cp.commodity_name, '*TBD*', '*TBD*', '*TBD*', '*TBD*', '*TBD*'
+		FROM v_invmgr_commodity_portfolio cp
+		WHERE (namespace, mnemonic) NOT IN (SELECT namespace, mnemonic FROM invmgr_commodity_research)
+-- After inserting new rows fill in the missing data, especiall for rows with *TBD*
+-- See readme file in repository for ideas on where to get this data.
+
+
+-- Insert any invested commodities missing into invmgr_account_investment.asset_class
+-- sort_key and asset_class are just given guess values that need review and manual update.
+INSERT INTO invmgr_account_investment
+SELECT cp.master_account_guid, cp.master_account_code, 
+	   cp.master_account_code || '-' || IFNULL(sr.asset_type_target,'NA') || '-' || cp.mnemonic as sort_key, cp.master_account_name, cp.commodity_guid, cp.namespace, cp.mnemonic, cp.commodity_name, 
+		sr.asset_type_target as asset_class
+	FROM v_invmgr_commodity_portfolio cp
+		LEFT OUTER JOIN invmgr_commodity_research sr on sr.namespace = cp.namespace and sr.mnemonic = cp.mnemonic
+	WHERE (cp.master_account_guid, cp.commodity_guid) not in (SELECT master_account_guid, commodity_guid FROM invmgr_account_investment)
+	--ORDER BY cp.master_account_name, sr.asset_type_target, cp.namespace, cp.mnemonic
+-- After inserting new rows update the sort_key and asset_class appropriately to match what is being done for other investment options.	
