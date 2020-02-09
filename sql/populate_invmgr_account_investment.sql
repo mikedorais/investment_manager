@@ -95,32 +95,65 @@ SELECT * FROM invmgr_account_investment
 	WHERE master_account_guid NOT IN (SELECT guid FROM accounts)
 SELECT * FROM invmgr_account_investment
 	WHERE commodity_guid NOT IN (SELECT guid FROM commodities)
+SELECT * FROM invmgr_account_investment
+	WHERE asset_class NOT IN (SELECT asset_class FROM invmgr_model_allocation)
+SELECT * FROM invmgr_account_investment
+	WHERE (namespace, mnemonic) NOT IN (SELECT namespace, mnemonic FROM invmgr_commodity_research)
+
+-- Missing invmgr_commodity_research records for commodities currently invested in
+-- (Fixed by INSERT statement below.)
+SELECT DISTINCT cp.namespace, cp.mnemonic, cp.commodity_name
+		FROM v_invmgr_commodity_portfolio cp
+		WHERE (namespace, mnemonic) NOT IN (SELECT namespace, mnemonic FROM invmgr_commodity_research)
+-- (Fixed by INSERT statement below.)		
+-- Missing v_invmgr_commodity_portfolio records for commodities currently invested in
+SELECT cp.master_account_guid, cp.master_account_code, 
+	   cp.master_account_code || '-' || IFNULL(sr.asset_type_target,'NA') || '-' || cp.mnemonic as sort_key, cp.master_account_name, cp.commodity_guid, cp.namespace, cp.mnemonic, cp.commodity_name, 
+		sr.asset_type_target as asset_class
+	FROM v_invmgr_commodity_portfolio cp
+		LEFT OUTER JOIN invmgr_commodity_research sr on sr.namespace = cp.namespace and sr.mnemonic = cp.mnemonic
+	WHERE (cp.master_account_guid, cp.commodity_guid) not in (SELECT master_account_guid, commodity_guid FROM invmgr_account_investment)
+	--ORDER BY cp.master_account_name, sr.asset_type_target, cp.namespace, cp.mnemonic
+-- Redundant values in invmgr_account_investment for master_account_code, master_account_name, and commodity_name
+-- that don't match primary table value.
+-- (Fixed by UPDATE statements below.)
+SELECT * FROM invmgr_account_investment
+	WHERE master_account_code <> (SELECT code FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
+SELECT * FROM invmgr_account_investment
+	WHERE master_account_name <> (SELECT name FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
+SELECT * FROM invmgr_account_investment
+	WHERE commodity_name <> (SELECT fullname FROM commodities c WHERE c.guid = invmgr_account_investment.commodity_guid)
+-- Redundant values in invmgr_commodity_research for commodity name  that don't match primary table value.
+-- (Fixed by UPDATE statements below.)
+SELECT * FROM invmgr_commodity_research
+	WHERE name <> (SELECT fullname FROM commodities c 
+				     WHERE c.namespace = invmgr_commodity_research.namespace AND c.mnemonic = invmgr_commodity_research.mnemonic)
 
 -- UPDATE values that are redundant copies (for human reference)
 	
 UPDATE invmgr_account_investment
 	SET master_account_code = (SELECT code FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
+	-- SELECT * FROM invmgr_account_investment
 	WHERE master_account_code <> (SELECT code FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
 	
 UPDATE invmgr_account_investment
 	SET master_account_name = (SELECT name FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
+	-- SELECT * FROM invmgr_account_investment
 	WHERE master_account_name <> (SELECT name FROM accounts a WHERE a.guid = invmgr_account_investment.master_account_guid)
 	
 UPDATE invmgr_account_investment
 	SET commodity_name = (SELECT fullname FROM commodities c WHERE c.guid = invmgr_account_investment.commodity_guid)
+	-- SELECT * FROM invmgr_account_investment
 	WHERE commodity_name <> (SELECT fullname FROM commodities c WHERE c.guid = invmgr_account_investment.commodity_guid)
-
-SELECT 	namespace, mnemonic, name, commodity_type, asset_class, asset_type_target, asset_target, asset_mix_actual, 
-	 esg, no_fee, no_load, net_exp_ratio, index_tracking, score_application, `index`, base_index FROM invmgr_commodity_research
-
 
 
 -- Make sure all commodity names in invmgr_commodity_research match the name of the commodity in commodities
 UPDATE invmgr_commodity_research
-	SET name = (SELECT fullname FROM commodities c 
-							WHERE c.namespace = invmgr_commodity_research.namespace AND c.mnemonic = invmgr_commodity_research.mnemonic)
-	AND name <> (SELECT fullname FROM commodities c 
-							WHERE c.namespace = invmgr_commodity_research.namespace AND c.mnemonic = invmgr_commodity_research.mnemonic)
+	SET   name =  (SELECT fullname FROM commodities c 
+	                 WHERE c.namespace = invmgr_commodity_research.namespace AND c.mnemonic = invmgr_commodity_research.mnemonic)
+	-- SELECT * FROM invmgr_commodity_research
+	WHERE name <> (SELECT fullname FROM commodities c 
+				     WHERE c.namespace = invmgr_commodity_research.namespace AND c.mnemonic = invmgr_commodity_research.mnemonic)
 
 -- Insert any invested commodities missing into invmgr_commodity_research
 INSERT INTO invmgr_commodity_research
